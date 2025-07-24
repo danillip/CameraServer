@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>IP-Camera Stream</title></head>
+<body style="margin:0;background:#000;">
+  <video id="player" controls autoplay style="width:100%;height:100%;"></video>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0/dist/hls.min.js"></script>
+  <script>
+    const video = document.getElementById('player');
+    const hls = new Hls();
+    hls.loadSource('/camera.m3u8'); // заменить, если нужен другой манифест
+    hls.attachMedia(video);
+  </script>
+</body>
+</html>
