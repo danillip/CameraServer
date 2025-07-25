@@ -1,123 +1,83 @@
 package com.danil.cameraserver
 
 import android.content.Intent
-import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.media3.common.MediaItem
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.rtsp.RtspMediaSource
-import androidx.preference.PreferenceManager
 import com.danil.cameraserver.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
-import java.net.InetAddress
-import java.nio.ByteBuffer
+import kotlinx.coroutines.*
+import org.json.JSONObject
+import java.net.URL
 
-@UnstableApi                // для классов Media3
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var b: ActivityMainBinding
-    private lateinit var player: ExoPlayer
+    private lateinit var binding: ActivityMainBinding
+    private var cfProcess: Process? = null
     private var serverRunning = false
 
-    // ────────────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
-        // применяем сохранённую тему (Day/Night)
-        val dark = PreferenceManager.getDefaultSharedPreferences(this)
-            .getBoolean("dark_theme", false)
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-            if (dark) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-            else      androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-        )
-
         super.onCreate(savedInstanceState)
-        b = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(b.root)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        setSupportActionBar(b.toolbar)
-
-        b.fabServer.setOnClickListener { toggleServer() }
-
-        connectAndPlay()           // сразу отображаем поток
-    }
-    // ────────────────────────────────────────────────────────────
-    /** создаём пункт меню «Settings» */
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
+        binding.liveBtn.setOnClickListener { toggleLive() }
     }
 
-    /** обработка нажатия пунктов меню */
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        R.id.action_settings -> {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            true
+    private fun toggleLive() {
+        if (cfProcess == null) startPublicTunnel() else stopPublicTunnel()
+    }
+
+    private fun startPublicTunnel() {
+        if (!serverRunning) toggleServer()
+
+        val bin = AssetCopier.copyIfMissing(this, "cloudflared")
+        val creds = AssetCopier.copyIfMissing(this, "warp.json")
+        val cmd = listOf(
+            bin.absolutePath, "tunnel",
+            "--no-autoupdate",
+            "--url", "http://127.0.0.1:8080",
+            "--credentials-file", creds.absolutePath
+        )
+        cfProcess = ProcessBuilder(cmd).redirectErrorStream(true).start()
+
+        GlobalScope.launch(Dispatchers.IO) {
+            repeat(20) {
+                delay(500)
+                runCatching {
+                    val api = URL("http://127.0.0.1:3333/ready").readText()
+                    val url = JSONObject(api).getJSONArray("config")
+                        .getJSONObject(0).getString("url")
+                    withContext(Dispatchers.Main) {
+                        Snackbar.make(binding.liveBtn, "LIVE: $url", Snackbar.LENGTH_LONG).show()
+                        binding.liveBtn.text = "Stop"
+                    }
+                    return@launch
+                }
+            }
         }
-        else -> super.onOptionsItemSelected(item)
     }
-    // ────────────────────────────────────────────────────────────
-    /** старт / стоп встроенного веб‑сервера */
+
+    private fun stopPublicTunnel() {
+        cfProcess?.destroy()
+        cfProcess = null
+        if (serverRunning) toggleServer()
+        binding.liveBtn.text = "Go Live"
+    }
+
     private fun toggleServer() {
         val intent = Intent(this, ServerService::class.java)
 
         if (serverRunning) {
             stopService(intent)
-            b.fabServer.setImageResource(android.R.drawable.ic_media_play)
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 ContextCompat.startForegroundService(this, intent)
             } else {
                 startService(intent)
             }
-            // показываем, куда транслируется
-            val url = "http://${getLocalIp()}:8080/"
-            Snackbar.make(b.playerView, "Сервер запущен: $url", Snackbar.LENGTH_LONG).show()
-
-            b.fabServer.setImageResource(android.R.drawable.ic_media_pause)
         }
         serverRunning = !serverRunning
-    }
-    // ────────────────────────────────────────────────────────────
-    /** подключаемся к камере и выводим видео */
-    private fun connectAndPlay() {
-        val prefs  = PreferenceManager.getDefaultSharedPreferences(this)
-        val ip     = prefs.getString("ip_address", "192.168.0.44")
-        val login  = prefs.getString("login", "admin")
-        val pass   = prefs.getString("password", "12345")
-
-        val url = "rtsp://$login:$pass@$ip:554/Streaming/Channels/101?transportmode=unicast"
-
-        if (::player.isInitialized) player.release()
-
-        player = ExoPlayer.Builder(this).build().also { exo ->
-            b.playerView.player = exo
-            val mediaItem = MediaItem.fromUri(url)
-            val src = RtspMediaSource.Factory()
-                .setForceUseRtpTcp(true)
-                .createMediaSource(mediaItem)
-            exo.setMediaSource(src)
-            exo.prepare()
-            exo.playWhenReady = true
-        }
-
-        Snackbar.make(b.playerView, "Streaming from $ip", Snackbar.LENGTH_SHORT).show()
-    }
-    // ────────────────────────────────────────────────────────────
-    /** получаем локальный IP планшета (Wi‑Fi) */
-    private fun getLocalIp(): String {
-        val wifi = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-        val ipInt = wifi.connectionInfo.ipAddress           // little‑endian
-        val ipBytes = ByteBuffer.allocate(4).putInt(ipInt).array().reversed().toByteArray()
-        return InetAddress.getByAddress(ipBytes).hostAddress ?: "0.0.0.0"
-    }
-    // ────────────────────────────────────────────────────────────
-    override fun onDestroy() {
-        if (::player.isInitialized) player.release()
-        super.onDestroy()
     }
 }

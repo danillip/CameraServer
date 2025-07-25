@@ -1,37 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ── Верхняя панель с меню ──────────────────────────────── -->
-    <com.google.android.material.appbar.AppBarLayout
+    <Button
+        android:id="@+id/liveBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/ThemeOverlay.CameraServer.Toolbar">
-
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:menu="@menu/main_menu" />
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <!-- ── Видео занимает всё оставшееся пространство ─────────── -->
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/player_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:resize_mode="fill"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
-
-    <!-- ── FAB для веб‑сервера ────────────────────────────────── -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabServer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:src="@android:drawable/ic_media_play" />
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        android:text="@string/btn_go_live"
+        android:layout_gravity="center" />
+</FrameLayout>
