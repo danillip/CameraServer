@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.CameraServer" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+    <style name="Theme.CameraServer" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="ThemeOverlay.CameraServer.Toolbar"
+        parent="ThemeOverlay.Material3.ActionBar">
+    <!-- контрастный цвет фона, чтобы иконка была видна -->
+    <item name="android:background">?attr/colorPrimary</item>
+    <item name="titleTextColor">?attr/colorOnPrimary</item>
+    <item name="subtitleTextColor">?attr/colorOnPrimary</item>
+    </style>
+
 </resources>

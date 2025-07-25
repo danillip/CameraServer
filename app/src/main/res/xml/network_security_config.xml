@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- разрешаем только IP камеры -->
+        <domain includeSubdomains="false">192.168.0.44</domain>
+    </domain-config>
+</network-security-config>

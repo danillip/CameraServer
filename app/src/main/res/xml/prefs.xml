@@ -1,0 +1,23 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <EditTextPreference
+        android:key="ip_address"
+        android:title="IP‑адрес"
+        android:defaultValue="192.168.0.44"
+        android:inputType="textUri"/>
+
+    <EditTextPreference
+        android:key="login"
+        android:title="Логин"
+        android:defaultValue="admin"/>
+
+    <EditTextPreference
+        android:key="password"
+        android:title="Пароль"
+        android:defaultValue="12345"
+        android:inputType="textPassword"/>
+
+    <SwitchPreferenceCompat
+        android:key="dark_theme"
+        android:title="Тёмная тема"/>
+</PreferenceScreen>
